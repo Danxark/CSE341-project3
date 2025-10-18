@@ -1,0 +1,52 @@
+openapi: 3.0.0
+info:
+  title: Travel Destinations API
+  version: 1.0.0
+  description: API for exploring destinations and reviews
+servers:
+  - url: https://your-app-name.onrender.com
+paths:
+  /api/destinations:
+    get:
+      summary: Get all destinations
+      responses:
+        '200':
+          description: List of destinations
+    post:
+      summary: Create a new destination
+      responses:
+        '201':
+          description: Destination created
+  /api/destinations/{id}:
+    get:
+      summary: Get destination by ID
+      responses:
+        '200':
+          description: Destination details
+    put:
+      summary: Update destination
+      responses:
+        '200':
+          description: Destination updated
+    delete:
+      summary: Delete destination
+      responses:
+        '200':
+          description: Destination deleted
+  /api/reviews:
+    get:
+      summary: Get all reviews
+      responses:
+        '200':
+          description: List of reviews
+    post:
+      summary: Create a review
+      responses:
+        '201':
+          description: Review created
+  /api/reviews/{id}:
+    delete:
+      summary: Delete a review
+      responses:
+        '200':
+          description: Review deleted
