@@ -1,47 +1,46 @@
-// server.js
-
-// Cargar variables de entorno desde .env
 require('dotenv').config({ path: 'C:/Users/PC/Downloads/CSE341-project3/.env' });
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const setupSwagger = require('./swagger'); // Swagger
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json());
+// ✅ Middleware
 app.use(cors());
+app.use(express.json());
 
-// Debug dotenv
+// ✅ Verificar entorno
 console.log('Directorio actual:', __dirname);
 console.log('MONGODB_URI cargado:', process.env.MONGODB_URI);
 
-// Rutas
+// ✅ Conexión a MongoDB
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ Conectado a MongoDB correctamente');
+  })
+  .catch((error) => {
+    console.error('❌ Error de conexión a MongoDB:', error.message);
+  });
+
+// ✅ Rutas
 const destinationRoutes = require('./routes/destinations');
 const reviewRoutes = require('./routes/reviews');
 
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// Configurar Swagger
+// ✅ Swagger (documentación)
+const setupSwagger = require('./swagger');
 setupSwagger(app);
 
-// Conexión a MongoDB
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error('❌ Falta MONGODB_URI en el archivo .env');
-  process.exit(1);
-}
+// ✅ Ruta base
+app.get('/', (req, res) => {
+  res.send('🌍 Bienvenido a la API de Travel Destinations con Reviews');
+});
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log('✅ Conectado a MongoDB correctamente'))
-  .catch((err) => console.error('❌ Error de conexión a MongoDB:', err.message));
-
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
+// ✅ Servidor
 app.listen(PORT, () => {
   console.log(`🌐 Servidor corriendo en el puerto ${PORT}`);
 });
