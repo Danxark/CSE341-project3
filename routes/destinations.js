@@ -86,6 +86,11 @@ router.get('/:id', async (req, res) => {
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Destination'
+ *           example:
+ *             name: "Quito"
+ *             country: "Ecuador"
+ *             price: 50
+ *             description: "Capital city of Ecuador surrounded by mountains."
  *     responses:
  *       201:
  *         description: Destino creado
@@ -94,12 +99,12 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', ensureAuthenticated, async (req, res) => {
   try {
-    const { name, location, price, description } = req.body;
-    if (!name || !location || !price) {
-      return res.status(400).json({ message: 'name, location, and price are required' });
+    const { name, country, price, description } = req.body; // <- use country
+    if (!name || !country || !price) {
+      return res.status(400).json({ message: 'name, country, and price are required' });
     }
 
-    const newDestination = new Destination({ name, location, price, description });
+    const newDestination = new Destination({ name, country, price, description });
     const saved = await newDestination.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -128,6 +133,11 @@ router.post('/', ensureAuthenticated, async (req, res) => {
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Destination'
+ *           example:
+ *             name: "Quito"
+ *             country: "Ecuador"
+ *             price: 55
+ *             description: "Updated description."
  *     responses:
  *       200:
  *         description: Destino actualizado
