@@ -1,5 +1,7 @@
 // server.js
-require('dotenv').config(); // Cargar variables de entorno primero
+
+// Cargar variables de entorno desde .env de forma explícita
+require('dotenv').config({ path: './.env' });
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -7,7 +9,8 @@ const cors = require('cors');
 
 const app = express();
 
-// Debug: verificar si MONGODB_URI se carga
+// Debug: verificar que dotenv carga correctamente
+console.log('Directorio actual:', __dirname);
 console.log('MONGODB_URI cargado:', process.env.MONGODB_URI);
 
 // Middleware
