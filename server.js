@@ -56,14 +56,15 @@ app.get(
   '/auth/github/callback',
   passport.authenticate('github', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect('/api-docs'); // Redirect after successful login
+    // Redirect to Swagger docs after login
+    res.redirect('/api-docs');
   }
 );
 
 // --- Auth middleware for protecting routes ---
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
-  res.status(401).json({ message: 'Unauthorized' });
+  res.status(401).json({ message: 'Unauthorized - please log in with GitHub' });
 }
 
 // --- Swagger setup ---
@@ -120,13 +121,14 @@ const options = {
       },
     },
   },
-  apis: ['./routes/*.js'], // point to your route files
+  apis: ['./routes/*.js'], // point to route files
 };
 
 const swaggerSpec = swaggerJsdoc(options);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
+// Protect POST/PUT routes with GitHub OAuth
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/reviews', reviewRoutes);
 
