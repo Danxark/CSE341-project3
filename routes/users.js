@@ -2,57 +2,81 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// CREATE user
-router.post('/', async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-    res.status(201).json(user);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management
+ */
 
-// READ all users
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ */
 router.get('/', async (req, res) => {
-  try {
-    const users = await User.find();
-    res.status(200).json(users);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const users = await User.find();
+  res.json(users);
 });
 
-// READ single user by ID
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Create a new user
+ *     tags: [Users]
+ */
+router.post('/', async (req, res) => {
+  const user = new User(req.body);
+  await user.save();
+  res.status(201).json(user);
+});
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ */
 router.get('/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const user = await User.findById(req.params.id);
+  res.json(user);
 });
 
-// UPDATE user by ID
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update a user by ID
+ *     tags: [Users]
+ */
 router.put('/:id', async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+  const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  res.json(user);
 });
 
-// DELETE user by ID
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete a user by ID
+ *     tags: [Users]
+ */
 router.delete('/:id', async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(204).send(); // No Content
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  await User.findByIdAndDelete(req.params.id);
+  res.json({ message: 'User deleted' });
 });
 
 module.exports = router;
