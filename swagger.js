@@ -12,7 +12,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:3000", // Cambiar después por URL de Render
+        url: "https://cse341-project3.onrender.com", // Cambiar después por URL de Render
       },
     ],
   },
