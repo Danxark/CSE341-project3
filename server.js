@@ -1,12 +1,12 @@
 // server.js
 
-// Cargar variables de entorno desde .env (ruta absoluta opcional)
+// Cargar variables de entorno desde .env
 require('dotenv').config({ path: 'C:/Users/PC/Downloads/CSE341-project3/.env' });
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const setupSwagger = require('./swagger'); // Importar Swagger
+const setupSwagger = require('./swagger'); // Swagger
 
 const app = express();
 
@@ -20,7 +20,10 @@ console.log('MONGODB_URI cargado:', process.env.MONGODB_URI);
 
 // Rutas
 const destinationRoutes = require('./routes/destinations');
+const reviewRoutes = require('./routes/reviews');
+
 app.use('/api/destinations', destinationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Configurar Swagger
 setupSwagger(app);
