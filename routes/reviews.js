@@ -2,6 +2,125 @@ const express = require('express');
 const router = express.Router();
 const Review = require('../models/review');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Reviews
+ *   description: API endpoints for managing reviews
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Review:
+ *       type: object
+ *       required:
+ *         - destinationId
+ *         - reviewerName
+ *         - rating
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Auto-generated ID for the review
+ *         destinationId:
+ *           type: string
+ *           description: The destination related to the review
+ *         reviewerName:
+ *           type: string
+ *           description: Name of the reviewer
+ *         rating:
+ *           type: number
+ *           minimum: 1
+ *           maximum: 5
+ *           description: Rating from 1 to 5
+ *         comment:
+ *           type: string
+ *           description: Optional comment
+ *         date:
+ *           type: string
+ *           format: date
+ *           description: Date of the review
+ */
+
+/**
+ * @swagger
+ * /api/reviews:
+ *   get:
+ *     summary: Get all reviews
+ *     tags: [Reviews]
+ *     responses:
+ *       200:
+ *         description: List of all reviews
+ *   post:
+ *     summary: Create a new review
+ *     tags: [Reviews]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Review'
+ *           example:
+ *             destinationId: "67125dffbc23a14e8a9b3a6d"
+ *             reviewerName: "Danny Alonzo"
+ *             rating: 5
+ *             comment: "Amazing place to visit!"
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ */
+
+/**
+ * @swagger
+ * /api/reviews/{id}:
+ *   get:
+ *     summary: Get a review by ID
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     responses:
+ *       200:
+ *         description: Review details
+ *   put:
+ *     summary: Update a review by ID
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Review'
+ *     responses:
+ *       200:
+ *         description: Review updated successfully
+ *   delete:
+ *     summary: Delete a review by ID
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     responses:
+ *       200:
+ *         description: Review deleted successfully
+ */
+
 // ✅ GET all reviews
 router.get('/', async (req, res) => {
   try {
@@ -57,8 +176,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = { ...req.body };
 
-    // ❌ Prevent _id modification
-    delete updateData._id;
+    delete updateData._id; // ❌ Prevent _id modification
 
     const updatedReview = await Review.findByIdAndUpdate(id, updateData, {
       new: true,
