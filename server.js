@@ -3,10 +3,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const session = require('express-session');
+const passport = require('passport');
+const GitHubStrategy = require('passport-github2').Strategy;
 
 const destinationRoutes = require('./routes/destinations');
 const reviewRoutes = require('./routes/reviews');
-const ensureAuthenticated = require('./middleware/auth'); // placeholder for OAuth
 
 const app = express();
 app.use(express.json());
@@ -16,6 +18,53 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a MongoDB correctamente'))
   .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
+
+// --- Session setup ---
+app.use(
+  session({
+    secret: 'super-secret-key',
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+
+// --- Passport setup ---
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: 'https://cse341-project3-6ymh.onrender.com/auth/github/callback',
+    },
+    function (accessToken, refreshToken, profile, done) {
+      // Here you could save user info to DB if needed
+      return done(null, profile);
+    }
+  )
+);
+
+// --- GitHub OAuth routes ---
+app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+
+app.get(
+  '/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: '/' }),
+  (req, res) => {
+    res.redirect('/api-docs'); // Redirect after successful login
+  }
+);
+
+// --- Auth middleware for protecting routes ---
+function ensureLoggedIn(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ message: 'Unauthorized' });
+}
 
 // --- Swagger setup ---
 const options = {
