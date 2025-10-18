@@ -1,65 +1,91 @@
 require('dotenv').config({ path: './.env' });
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const passport = require('passport');
-const GitHubStrategy = require('passport-github2').Strategy;
-const session = require('express-session');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 const destinationRoutes = require('./routes/destinations');
 const reviewRoutes = require('./routes/reviews');
+const ensureAuthenticated = require('./middleware/auth'); // placeholder for OAuth
 
 const app = express();
-
-// Middleware
-app.use(cors());
 app.use(express.json());
 
-// Sessions (required for Passport)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'default_session_secret',
-  resave: false,
-  saveUninitialized: true
-}));
+// --- MongoDB connection ---
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ Conectado a MongoDB correctamente'))
+  .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
-// Passport setup
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.use(new GitHubStrategy({
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: `${process.env.FRONTEND_URL}/auth/github/callback`
+// --- Swagger setup ---
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Travel API',
+      version: '1.0.0',
+      description: 'API para gestionar destinos y reseñas',
+    },
+    servers: [
+      {
+        url: 'https://cse341-project3-6ymh.onrender.com',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        githubAuth: {
+          type: 'oauth2',
+          flows: {
+            authorizationCode: {
+              authorizationUrl: 'https://github.com/login/oauth/authorize',
+              tokenUrl: 'https://github.com/login/oauth/access_token',
+              scopes: {},
+            },
+          },
+        },
+      },
+      schemas: {
+        Destination: {
+          type: 'object',
+          required: ['name', 'location', 'price'],
+          properties: {
+            _id: { type: 'string' },
+            name: { type: 'string' },
+            location: { type: 'string' },
+            price: { type: 'number' },
+            description: { type: 'string' },
+          },
+        },
+        Review: {
+          type: 'object',
+          required: ['destinationId', 'reviewerName', 'rating'],
+          properties: {
+            _id: { type: 'string' },
+            destinationId: { type: 'string' },
+            reviewerName: { type: 'string' },
+            rating: { type: 'number' },
+            comment: { type: 'string' },
+            date: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
   },
-  function(accessToken, refreshToken, profile, done) {
-    // Save user info if needed
-    return done(null, profile);
-  }
-));
+  apis: ['./routes/*.js'], // point to your route files
+};
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+const swaggerSpec = swaggerJsdoc(options);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// OAuth routes
-app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
-
-app.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/' }),
-  (req, res) => {
-    res.redirect('/'); // redirect after successful login
-  }
-);
-
-// Routes
+// --- Routes ---
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// --- Default route ---
+app.get('/', (req, res) => {
+  res.send('Welcome to Travel API!');
+});
 
+// --- Server start ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
-
-module.exports = app; // for testing
+app.listen(PORT, () => console.log(`🌐 Servidor corriendo en el puerto ${PORT}`));
