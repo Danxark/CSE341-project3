@@ -17,14 +17,14 @@ app.use(express.json());
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a MongoDB correctamente'))
-  .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
+  .catch((err) => console.error('❌ Error de conexión a MongoDB:', err));
 
 // --- Session setup ---
 app.use(
   session({
-    secret: 'super-secret-key',
+    secret: process.env.SESSION_SECRET || 'super-secret-key',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // safer for production
   })
 );
 
@@ -42,8 +42,8 @@ passport.use(
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       callbackURL: 'https://cse341-project3-6ymh.onrender.com/auth/github/callback',
     },
-    function (accessToken, refreshToken, profile, done) {
-      // Here you could save user info to DB if needed
+    (accessToken, refreshToken, profile, done) => {
+      // Optional: save user info to DB here
       return done(null, profile);
     }
   )
@@ -61,7 +61,7 @@ app.get(
   }
 );
 
-// --- Auth middleware for protecting routes ---
+// --- Auth middleware to protect POST/PUT routes ---
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.status(401).json({ message: 'Unauthorized - please log in with GitHub' });
@@ -121,16 +121,23 @@ const options = {
       },
     },
   },
-  apis: ['./routes/*.js'], // point to route files
+  apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
-// Protect POST/PUT routes with GitHub OAuth
-app.use('/api/destinations', destinationRoutes);
-app.use('/api/reviews', reviewRoutes);
+// GET routes remain public, POST/PUT protected by ensureLoggedIn
+app.use('/api/destinations', (req, res, next) => {
+  if (['POST', 'PUT'].includes(req.method)) return ensureLoggedIn(req, res, next);
+  next();
+}, destinationRoutes);
+
+app.use('/api/reviews', (req, res, next) => {
+  if (['POST', 'PUT'].includes(req.method)) return ensureLoggedIn(req, res, next);
+  next();
+}, reviewRoutes);
 
 // --- Default route ---
 app.get('/', (req, res) => {
