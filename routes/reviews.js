@@ -6,25 +6,31 @@ const Review = require('../models/review');
  * @swagger
  * tags:
  *   name: Reviews
- *   description: API para gestionar reseñas de destinos
+ *   description: API for managing user reviews
  */
 
 /**
  * @swagger
  * /api/reviews:
  *   get:
- *     summary: Obtiene todas las reseñas
+ *     summary: Returns all reviews
  *     tags: [Reviews]
  *     responses:
  *       200:
- *         description: Lista de reseñas
+ *         description: List of reviews
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Review'
  */
 router.get('/', async (req, res) => {
   try {
     const reviews = await Review.find();
-    res.json(reviews);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving reviews', error });
   }
 });
 
@@ -32,16 +38,32 @@ router.get('/', async (req, res) => {
  * @swagger
  * /api/reviews/{id}:
  *   get:
- *     summary: Obtiene una reseña por ID
+ *     summary: Get a single review by ID
  *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     responses:
+ *       200:
+ *         description: Review found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Review'
+ *       404:
+ *         description: Review not found
  */
 router.get('/:id', async (req, res) => {
   try {
     const review = await Review.findById(req.params.id);
-    if (!review) return res.status(404).json({ error: 'Review not found' });
-    res.json(review);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    res.status(200).json(review);
+  } catch (error) {
+    res.status(500).json({ message: 'Error retrieving review', error });
   }
 });
 
@@ -49,16 +71,41 @@ router.get('/:id', async (req, res) => {
  * @swagger
  * /api/reviews:
  *   post:
- *     summary: Crea una nueva reseña
+ *     summary: Create a new review
  *     tags: [Reviews]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Review'
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Review'
+ *       400:
+ *         description: Bad request
  */
 router.post('/', async (req, res) => {
   try {
-    const newReview = new Review(req.body);
-    const savedReview = await newReview.save();
-    res.status(201).json(savedReview);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const { destinationId, reviewerName, rating, comment } = req.body;
+    if (!destinationId || !reviewerName || !rating) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    const newReview = new Review({
+      destinationId,
+      reviewerName,
+      rating,
+      comment,
+      date: new Date(),
+    });
+    await newReview.save();
+    res.status(201).json(newReview);
+  } catch (error) {
+    res.status(400).json({ message: 'Error creating review', error });
   }
 });
 
@@ -66,20 +113,34 @@ router.post('/', async (req, res) => {
  * @swagger
  * /api/reviews/{id}:
  *   put:
- *     summary: Actualiza una reseña por ID
+ *     summary: Update a review by ID
  *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Review'
+ *     responses:
+ *       200:
+ *         description: Review updated
+ *       404:
+ *         description: Review not found
  */
 router.put('/:id', async (req, res) => {
   try {
-    const updatedReview = await Review.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!updatedReview) return res.status(404).json({ error: 'Review not found' });
-    res.json(updatedReview);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const updated = await Review.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Review not found' });
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating review', error });
   }
 });
 
@@ -87,16 +148,28 @@ router.put('/:id', async (req, res) => {
  * @swagger
  * /api/reviews/{id}:
  *   delete:
- *     summary: Elimina una reseña por ID
+ *     summary: Delete a review by ID
  *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Review ID
+ *     responses:
+ *       200:
+ *         description: Review deleted
+ *       404:
+ *         description: Review not found
  */
 router.delete('/:id', async (req, res) => {
   try {
-    const deletedReview = await Review.findByIdAndDelete(req.params.id);
-    if (!deletedReview) return res.status(404).json({ error: 'Review not found' });
-    res.json({ message: 'Review deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const deleted = await Review.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Review not found' });
+    res.status(200).json({ message: 'Review deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting review', error });
   }
 });
 
