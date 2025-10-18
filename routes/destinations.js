@@ -1,9 +1,32 @@
-// routes/destinations.js
 const express = require('express');
 const router = express.Router();
 const Destination = require('../models/destination');
 
-// GET all destinations
+/**
+ * @swagger
+ * tags:
+ *   name: Destinations
+ *   description: API para gestionar destinos turísticos
+ */
+
+/**
+ * @swagger
+ * /api/destinations:
+ *   get:
+ *     summary: Obtiene todos los destinos
+ *     tags: [Destinations]
+ *     responses:
+ *       200:
+ *         description: Lista de destinos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Destination'
+ *       500:
+ *         description: Error del servidor
+ */
 router.get('/', async (req, res) => {
   try {
     const destinations = await Destination.find();
@@ -13,7 +36,31 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET a single destination by ID
+/**
+ * @swagger
+ * /api/destinations/{id}:
+ *   get:
+ *     summary: Obtiene un destino por ID
+ *     tags: [Destinations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del destino
+ *     responses:
+ *       200:
+ *         description: Destino encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Destination'
+ *       404:
+ *         description: Destino no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 router.get('/:id', async (req, res) => {
   try {
     const destination = await Destination.findById(req.params.id);
@@ -24,7 +71,24 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST a new destination
+/**
+ * @swagger
+ * /api/destinations:
+ *   post:
+ *     summary: Crea un nuevo destino
+ *     tags: [Destinations]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Destination'
+ *     responses:
+ *       201:
+ *         description: Destino creado
+ *       400:
+ *         description: Datos inválidos
+ */
 router.post('/', async (req, res) => {
   try {
     const newDestination = new Destination(req.body);
@@ -35,7 +99,33 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT (update) a destination by ID
+/**
+ * @swagger
+ * /api/destinations/{id}:
+ *   put:
+ *     summary: Actualiza un destino existente por ID
+ *     tags: [Destinations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del destino a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Destination'
+ *     responses:
+ *       200:
+ *         description: Destino actualizado
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Destino no encontrado
+ */
 router.put('/:id', async (req, res) => {
   try {
     const updatedDestination = await Destination.findByIdAndUpdate(
@@ -50,7 +140,27 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE a destination by ID
+/**
+ * @swagger
+ * /api/destinations/{id}:
+ *   delete:
+ *     summary: Elimina un destino por ID
+ *     tags: [Destinations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del destino a eliminar
+ *     responses:
+ *       200:
+ *         description: Destino eliminado
+ *       404:
+ *         description: Destino no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 router.delete('/:id', async (req, res) => {
   try {
     const deletedDestination = await Destination.findByIdAndDelete(req.params.id);
