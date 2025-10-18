@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Review = require('../models/review');
 const ensureAuthenticated = require('../middleware/auth'); // optional, if using OAuth
 
@@ -64,6 +65,10 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid review ID' });
+    }
+
     const review = await Review.findById(req.params.id);
     if (!review) return res.status(404).json({ error: 'Review not found' });
     res.json(review);
@@ -79,7 +84,7 @@ router.get('/:id', async (req, res) => {
  *     summary: Crea una nueva reseña
  *     tags: [Reviews]
  *     security:
- *       - githubAuth: []   # si proteges con OAuth
+ *       - githubAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -95,8 +100,20 @@ router.get('/:id', async (req, res) => {
 router.post('/', ensureAuthenticated, async (req, res) => {
   try {
     const { destinationId, reviewerName, rating, comment } = req.body;
-    if (!destinationId || !reviewerName || !rating) {
+
+    // Validate required fields
+    if (!destinationId || !reviewerName || rating == null) {
       return res.status(400).json({ message: 'destinationId, reviewerName, and rating are required' });
+    }
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(destinationId)) {
+      return res.status(400).json({ message: 'Invalid destinationId' });
+    }
+
+    // Validate rating range
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
 
     const newReview = new Review({
@@ -121,7 +138,7 @@ router.post('/', ensureAuthenticated, async (req, res) => {
  *     summary: Actualiza una reseña por ID
  *     tags: [Reviews]
  *     security:
- *       - githubAuth: []   # si proteges con OAuth
+ *       - githubAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -146,7 +163,18 @@ router.post('/', ensureAuthenticated, async (req, res) => {
 router.put('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const updateData = { ...req.body };
-    delete updateData._id; // evita modificar _id
+    delete updateData._id;
+
+    // Validate destinationId if updated
+    if (updateData.destinationId && !mongoose.Types.ObjectId.isValid(updateData.destinationId)) {
+      return res.status(400).json({ message: 'Invalid destinationId' });
+    }
+
+    // Validate rating if updated
+    if (updateData.rating != null && (updateData.rating < 1 || updateData.rating > 5)) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
     const updated = await Review.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ message: 'Review not found' });
     res.json(updated);
@@ -178,6 +206,10 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid review ID' });
+    }
+
     const deleted = await Review.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Review not found' });
     res.json({ message: 'Review deleted' });
