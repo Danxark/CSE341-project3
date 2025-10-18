@@ -21,6 +21,18 @@ const options = {
       },
     ],
     components: {
+      securitySchemes: {
+        githubAuth: {
+          type: 'oauth2',
+          flows: {
+            authorizationCode: {
+              authorizationUrl: 'https://github.com/login/oauth/authorize',
+              tokenUrl: 'https://github.com/login/oauth/access_token',
+              scopes: {},
+            },
+          },
+        },
+      },
       schemas: {
         Destination: {
           type: 'object',
@@ -94,5 +106,18 @@ const options = {
 const swaggerSpec = swaggerJsDoc(options);
 
 module.exports = function (app) {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use(
+    '/api-docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      swaggerOptions: {
+        oauth2RedirectUrl: process.env.GITHUB_CALLBACK_URL, // must match your GitHub OAuth app
+        oauth: {
+          clientId: process.env.GITHUB_CLIENT_ID,          // GitHub Client ID
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,  // optional for Swagger UI
+          appName: 'Travel API',
+        },
+      },
+    })
+  );
 };
