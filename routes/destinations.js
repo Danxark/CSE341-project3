@@ -1,37 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const Review = require('../models/review');
-const ensureAuthenticated = require('../middleware/auth');
+const Destination = require('../models/destination');
+const ensureAuthenticated = require('../middleware/auth'); // optional if using OAuth
 
 /**
  * @swagger
  * tags:
- *   name: Reviews
- *   description: API para gestionar reseñas de destinos
+ *   name: Destinations
+ *   description: API para gestionar destinos turísticos
  */
 
 /**
  * @swagger
- * /api/reviews:
+ * /api/destinations:
  *   get:
- *     summary: Obtiene todas las reseñas
- *     tags: [Reviews]
+ *     summary: Obtiene todos los destinos
+ *     tags: [Destinations]
  *     responses:
  *       200:
- *         description: Lista de reseñas
+ *         description: Lista de destinos
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Review'
+ *                 $ref: '#/components/schemas/Destination'
  *       500:
  *         description: Error del servidor
  */
 router.get('/', async (req, res) => {
   try {
-    const reviews = await Review.find();
-    res.json(reviews);
+    const destinations = await Destination.find();
+    res.json(destinations);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -39,34 +39,34 @@ router.get('/', async (req, res) => {
 
 /**
  * @swagger
- * /api/reviews/{id}:
+ * /api/destinations/{id}:
  *   get:
- *     summary: Obtiene una reseña por ID
- *     tags: [Reviews]
+ *     summary: Obtiene un destino por ID
+ *     tags: [Destinations]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID de la reseña
+ *         description: ID del destino
  *     responses:
  *       200:
- *         description: Reseña encontrada
+ *         description: Destino encontrado
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Review'
+ *               $ref: '#/components/schemas/Destination'
  *       404:
- *         description: Reseña no encontrada
+ *         description: Destino no encontrado
  *       500:
  *         description: Error del servidor
  */
 router.get('/:id', async (req, res) => {
   try {
-    const review = await Review.findById(req.params.id);
-    if (!review) return res.status(404).json({ error: 'Review not found' });
-    res.json(review);
+    const destination = await Destination.findById(req.params.id);
+    if (!destination) return res.status(404).json({ error: 'Destination not found' });
+    res.json(destination);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -74,106 +74,109 @@ router.get('/:id', async (req, res) => {
 
 /**
  * @swagger
- * /api/reviews:
+ * /api/destinations:
  *   post:
- *     summary: Crea una nueva reseña
- *     tags: [Reviews]
+ *     summary: Crea un nuevo destino
+ *     tags: [Destinations]
  *     security:
- *       - githubAuth: []
+ *       - githubAuth: []   # proteger con OAuth si se desea
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Review'
+ *             $ref: '#/components/schemas/Destination'
  *     responses:
  *       201:
- *         description: Reseña creada
+ *         description: Destino creado
  *       400:
  *         description: Datos inválidos
  */
 router.post('/', ensureAuthenticated, async (req, res) => {
   try {
-    const { destinationId, reviewerName, rating, comment } = req.body;
-    if (!destinationId || !reviewerName || !rating) {
-      return res.status(400).json({ message: 'destinationId, reviewerName, and rating are required' });
+    const { name, location, price, description } = req.body;
+    if (!name || !location || !price) {
+      return res.status(400).json({ message: 'name, location, and price are required' });
     }
 
-    const newReview = new Review({ destinationId, reviewerName, rating, comment, date: new Date() });
-    const saved = await newReview.save();
+    const newDestination = new Destination({ name, location, price, description });
+    const saved = await newDestination.save();
     res.status(201).json(saved);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
 /**
  * @swagger
- * /api/reviews/{id}:
+ * /api/destinations/{id}:
  *   put:
- *     summary: Actualiza una reseña existente por ID
- *     tags: [Reviews]
+ *     summary: Actualiza un destino existente por ID
+ *     tags: [Destinations]
  *     security:
- *       - githubAuth: []
+ *       - githubAuth: []   # proteger con OAuth si se desea
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID de la reseña a actualizar
+ *         description: ID del destino a actualizar
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Review'
+ *             $ref: '#/components/schemas/Destination'
  *     responses:
  *       200:
- *         description: Reseña actualizada
+ *         description: Destino actualizado
  *       400:
  *         description: Datos inválidos
  *       404:
- *         description: Reseña no encontrada
+ *         description: Destino no encontrado
  */
 router.put('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const updateData = { ...req.body };
-    delete updateData._id;
-    const updated = await Review.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
-    if (!updated) return res.status(404).json({ message: 'Review not found' });
+    delete updateData._id; // evita modificar _id
+    const updated = await Destination.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updated) return res.status(404).json({ error: 'Destination not found' });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
 /**
  * @swagger
- * /api/reviews/{id}:
+ * /api/destinations/{id}:
  *   delete:
- *     summary: Elimina una reseña por ID
- *     tags: [Reviews]
+ *     summary: Elimina un destino por ID
+ *     tags: [Destinations]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID de la reseña a eliminar
+ *         description: ID del destino a eliminar
  *     responses:
  *       200:
- *         description: Reseña eliminada
+ *         description: Destino eliminado
  *       404:
- *         description: Reseña no encontrada
+ *         description: Destino no encontrado
  *       500:
  *         description: Error del servidor
  */
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await Review.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Review not found' });
-    res.json({ message: 'Review deleted' });
+    const deleted = await Destination.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Destination not found' });
+    res.json({ message: 'Destination deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1,81 +1,47 @@
 const express = require('express');
 const router = express.Router();
 const Review = require('../models/review');
+const ensureAuthenticated = require('../middleware/auth'); // optional, if using OAuth
 
 /**
  * @swagger
  * tags:
  *   name: Reviews
- *   description: API endpoints for managing reviews
- */
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     Review:
- *       type: object
- *       required:
- *         - destinationId
- *         - reviewerName
- *         - rating
- *       properties:
- *         id:
- *           type: string
- *           description: Auto-generated ID for the review
- *         destinationId:
- *           type: string
- *           description: The destination related to the review
- *         reviewerName:
- *           type: string
- *           description: Name of the reviewer
- *         rating:
- *           type: number
- *           minimum: 1
- *           maximum: 5
- *           description: Rating from 1 to 5
- *         comment:
- *           type: string
- *           description: Optional comment
- *         date:
- *           type: string
- *           format: date
- *           description: Date of the review
+ *   description: API para gestionar reseñas de destinos
  */
 
 /**
  * @swagger
  * /api/reviews:
  *   get:
- *     summary: Get all reviews
+ *     summary: Obtiene todas las reseñas
  *     tags: [Reviews]
  *     responses:
  *       200:
- *         description: List of all reviews
- *   post:
- *     summary: Create a new review
- *     tags: [Reviews]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Review'
- *           example:
- *             destinationId: "67125dffbc23a14e8a9b3a6d"
- *             reviewerName: "Danny Alonzo"
- *             rating: 5
- *             comment: "Amazing place to visit!"
- *     responses:
- *       201:
- *         description: Review created successfully
+ *         description: Lista de reseñas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Review'
+ *       500:
+ *         description: Error del servidor
  */
+router.get('/', async (req, res) => {
+  try {
+    const reviews = await Review.find();
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * @swagger
  * /api/reviews/{id}:
  *   get:
- *     summary: Get a review by ID
+ *     summary: Obtiene una reseña por ID
  *     tags: [Reviews]
  *     parameters:
  *       - in: path
@@ -83,20 +49,37 @@ const Review = require('../models/review');
  *         schema:
  *           type: string
  *         required: true
- *         description: Review ID
+ *         description: ID de la reseña
  *     responses:
  *       200:
- *         description: Review details
- *   put:
- *     summary: Update a review by ID
+ *         description: Reseña encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Review'
+ *       404:
+ *         description: Reseña no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    res.json(review);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/reviews:
+ *   post:
+ *     summary: Crea una nueva reseña
  *     tags: [Reviews]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: Review ID
+ *     security:
+ *       - githubAuth: []   # si proteges con OAuth
  *     requestBody:
  *       required: true
  *       content:
@@ -104,55 +87,16 @@ const Review = require('../models/review');
  *           schema:
  *             $ref: '#/components/schemas/Review'
  *     responses:
- *       200:
- *         description: Review updated successfully
- *   delete:
- *     summary: Delete a review by ID
- *     tags: [Reviews]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: Review ID
- *     responses:
- *       200:
- *         description: Review deleted successfully
+ *       201:
+ *         description: Reseña creada
+ *       400:
+ *         description: Datos inválidos
  */
-
-// ✅ GET all reviews
-router.get('/', async (req, res) => {
+router.post('/', ensureAuthenticated, async (req, res) => {
   try {
-    const reviews = await Review.find();
-    res.status(200).json(reviews);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching reviews', error });
-  }
-});
-
-// ✅ GET a review by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const review = await Review.findById(req.params.id);
-    if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
-    }
-    res.status(200).json(review);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching review', error });
-  }
-});
-
-// ✅ POST a new review
-router.post('/', async (req, res) => {
-  try {
-    const { destinationId, reviewerName, rating, comment, date } = req.body;
-
+    const { destinationId, reviewerName, rating, comment } = req.body;
     if (!destinationId || !reviewerName || !rating) {
-      return res
-        .status(400)
-        .json({ message: 'destinationId, reviewerName, and rating are required' });
+      return res.status(400).json({ message: 'destinationId, reviewerName, and rating are required' });
     }
 
     const newReview = new Review({
@@ -160,51 +104,85 @@ router.post('/', async (req, res) => {
       reviewerName,
       rating,
       comment,
-      date: date || new Date(),
+      date: new Date(),
     });
 
-    const savedReview = await newReview.save();
-    res.status(201).json(savedReview);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating review', error });
+    const saved = await newReview.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ PUT (update) a review by ID
-router.put('/:id', async (req, res) => {
+/**
+ * @swagger
+ * /api/reviews/{id}:
+ *   put:
+ *     summary: Actualiza una reseña por ID
+ *     tags: [Reviews]
+ *     security:
+ *       - githubAuth: []   # si proteges con OAuth
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la reseña a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Review'
+ *     responses:
+ *       200:
+ *         description: Reseña actualizada
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Reseña no encontrada
+ */
+router.put('/:id', ensureAuthenticated, async (req, res) => {
   try {
-    const { id } = req.params;
     const updateData = { ...req.body };
-
-    delete updateData._id; // ❌ Prevent _id modification
-
-    const updatedReview = await Review.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedReview) {
-      return res.status(404).json({ message: 'Review not found' });
-    }
-
-    res.status(200).json(updatedReview);
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating review', error });
+    delete updateData._id; // evita modificar _id
+    const updated = await Review.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    if (!updated) return res.status(404).json({ message: 'Review not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ DELETE a review by ID
+/**
+ * @swagger
+ * /api/reviews/{id}:
+ *   delete:
+ *     summary: Elimina una reseña por ID
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la reseña a eliminar
+ *     responses:
+ *       200:
+ *         description: Reseña eliminada
+ *       404:
+ *         description: Reseña no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
 router.delete('/:id', async (req, res) => {
   try {
-    const deletedReview = await Review.findByIdAndDelete(req.params.id);
-
-    if (!deletedReview) {
-      return res.status(404).json({ message: 'Review not found' });
-    }
-
-    res.status(200).json({ message: 'Review deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting review', error });
+    const deleted = await Review.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Review not found' });
+    res.json({ message: 'Review deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
