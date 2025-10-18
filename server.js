@@ -1,14 +1,17 @@
 require('dotenv').config({ path: './.env' });
 const express = require('express');
 const mongoose = require('mongoose');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
 const session = require('express-session');
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
+// --- Route imports ---
 const destinationRoutes = require('./routes/destinations');
 const reviewRoutes = require('./routes/reviews');
+const userRoutes = require('./routes/users');
+const bookingRoutes = require('./routes/bookings');
 
 const app = express();
 app.use(express.json());
@@ -43,7 +46,6 @@ passport.use(
       callbackURL: process.env.GITHUB_CALLBACK_URL,
     },
     function (accessToken, refreshToken, profile, done) {
-      // Save user info if needed
       profile.accessToken = accessToken;
       return done(null, profile);
     }
@@ -57,12 +59,11 @@ app.get(
   '/auth/github/callback',
   passport.authenticate('github', { failureRedirect: '/' }),
   (req, res) => {
-    // Redirect to Swagger docs after login
-    res.redirect('/api-docs');
+    res.redirect('/api-docs'); // redirect to Swagger after login
   }
 );
 
-// --- Auth middleware for protecting routes ---
+// --- Auth middleware ---
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.status(401).json({ message: 'Unauthorized - please log in with GitHub' });
@@ -75,12 +76,11 @@ const swaggerOptions = {
     info: {
       title: 'Travel API',
       version: '1.0.0',
-      description: 'API para gestionar destinos y reseñas',
+      description: 'API for managing Destinations, Reviews, Users, and Bookings',
     },
     servers: [
-      {
-        url: 'https://cse341-project3-6ymh.onrender.com',
-      },
+      { url: 'https://cse341-project3-6ymh.onrender.com' },
+      { url: 'http://localhost:3000' },
     ],
     components: {
       securitySchemes: {
@@ -119,19 +119,44 @@ const swaggerOptions = {
             date: { type: 'string', format: 'date-time' },
           },
         },
+        User: {
+          type: 'object',
+          required: ['name', 'email', 'password'],
+          properties: {
+            _id: { type: 'string' },
+            name: { type: 'string' },
+            email: { type: 'string' },
+            password: { type: 'string' },
+            role: { type: 'string' },
+          },
+        },
+        Booking: {
+          type: 'object',
+          required: ['userId', 'destinationId', 'startDate', 'endDate'],
+          properties: {
+            _id: { type: 'string' },
+            userId: { type: 'string' },
+            destinationId: { type: 'string' },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
+            status: { type: 'string' },
+          },
+        },
       },
     },
   },
-  apis: ['./routes/*.js'],
+  apis: ['./routes/*.js'], // Reads Swagger comments from route files
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
-// Protect POST/PUT/DELETE endpoints with OAuth
+// Protect POST/PUT/DELETE endpoints
 app.use('/api/destinations', ensureLoggedIn, destinationRoutes);
 app.use('/api/reviews', ensureLoggedIn, reviewRoutes);
+app.use('/api/users', ensureLoggedIn, userRoutes);
+app.use('/api/bookings', ensureLoggedIn, bookingRoutes);
 
 // --- Default route ---
 app.get('/', (req, res) => {
@@ -140,4 +165,4 @@ app.get('/', (req, res) => {
 
 // --- Server start ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🌐 Servidor corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
