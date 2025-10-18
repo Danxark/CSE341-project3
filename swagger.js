@@ -111,10 +111,10 @@ module.exports = function (app) {
     swaggerUi.serve,
     swaggerUi.setup(swaggerSpec, {
       swaggerOptions: {
-        oauth2RedirectUrl: process.env.GITHUB_CALLBACK_URL, // must match your GitHub OAuth app
+        oauth2RedirectUrl: process.env.GITHUB_CALLBACK_URL, // must match GitHub OAuth app
         oauth: {
-          clientId: process.env.GITHUB_CLIENT_ID,          // GitHub Client ID
-          clientSecret: process.env.GITHUB_CLIENT_SECRET,  // optional for Swagger UI
+          clientId: process.env.GITHUB_CLIENT_ID,           // GitHub Client ID
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,   // optional
           appName: 'Travel API',
         },
       },
