@@ -1,17 +1,17 @@
 // server.js
 
-// Cargar variables de entorno desde .env de forma explícita
-require('dotenv').config({ path: './.env' });
+// Cargar variables de entorno desde .env de forma explícita con ruta absoluta
+require('dotenv').config({ path: 'C:/Users/PC/Downloads/CSE341-project3/.env' });
+
+// Debug: verificar que dotenv carga correctamente
+console.log('Directorio actual:', __dirname);
+console.log('MONGODB_URI cargado:', process.env.MONGODB_URI);
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-
-// Debug: verificar que dotenv carga correctamente
-console.log('Directorio actual:', __dirname);
-console.log('MONGODB_URI cargado:', process.env.MONGODB_URI);
 
 // Middleware
 app.use(express.json());
