@@ -17,14 +17,14 @@ app.use(express.json());
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a MongoDB correctamente'))
-  .catch((err) => console.error('❌ Error de conexión a MongoDB:', err));
+  .catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
 // --- Session setup ---
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'super-secret-key',
+    secret: 'super-secret-key',
     resave: false,
-    saveUninitialized: false, // safer for production
+    saveUninitialized: true,
   })
 );
 
@@ -40,10 +40,11 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: 'https://cse341-project3-6ymh.onrender.com/auth/github/callback',
+      callbackURL: process.env.GITHUB_CALLBACK_URL,
     },
-    (accessToken, refreshToken, profile, done) => {
-      // Optional: save user info to DB here
+    function (accessToken, refreshToken, profile, done) {
+      // Save user info if needed
+      profile.accessToken = accessToken;
       return done(null, profile);
     }
   )
@@ -61,14 +62,14 @@ app.get(
   }
 );
 
-// --- Auth middleware to protect POST/PUT routes ---
+// --- Auth middleware for protecting routes ---
 function ensureLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.status(401).json({ message: 'Unauthorized - please log in with GitHub' });
 }
 
 // --- Swagger setup ---
-const options = {
+const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -87,7 +88,7 @@ const options = {
           type: 'oauth2',
           flows: {
             authorizationCode: {
-              authorizationUrl: 'https://github.com/login/oauth/authorize',
+              authorizationUrl: `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}`,
               tokenUrl: 'https://github.com/login/oauth/access_token',
               scopes: {},
             },
@@ -124,20 +125,13 @@ const options = {
   apis: ['./routes/*.js'],
 };
 
-const swaggerSpec = swaggerJsdoc(options);
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
-// GET routes remain public, POST/PUT protected by ensureLoggedIn
-app.use('/api/destinations', (req, res, next) => {
-  if (['POST', 'PUT'].includes(req.method)) return ensureLoggedIn(req, res, next);
-  next();
-}, destinationRoutes);
-
-app.use('/api/reviews', (req, res, next) => {
-  if (['POST', 'PUT'].includes(req.method)) return ensureLoggedIn(req, res, next);
-  next();
-}, reviewRoutes);
+// Protect POST/PUT/DELETE endpoints with OAuth
+app.use('/api/destinations', ensureLoggedIn, destinationRoutes);
+app.use('/api/reviews', ensureLoggedIn, reviewRoutes);
 
 // --- Default route ---
 app.get('/', (req, res) => {
